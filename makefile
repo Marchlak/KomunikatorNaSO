@@ -1,17 +1,19 @@
 CC=gcc
-CFLAGS=-Wall -Wextra -std=c99
-LDFLAGS=-lm
+CFLAGS=-Wall -g
 
 all: program
 
-program: main.o serwer.o
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+program: main.o klient.o serwer.o
+	$(CC) $(CFLAGS) main.o klient.o serwer.o -o program
 
-main.o: main.c serwer.h
-	$(CC) $(CFLAGS) -c $< -o $@
+main.o: main.c klient.h serwer.h
+	$(CC) $(CFLAGS) -c main.c
 
-serwer.o: serwer.c serwer.h
-	$(CC) $(CFLAGS) -c $< -o $@
+klient.o: klient.c klient.h
+	$(CC) $(CFLAGS) -c klient.c
+
+serwer.o: serwer.c klient.h serwer.h
+	$(CC) $(CFLAGS) -c serwer.c
 
 clean:
 	rm -f *.o program

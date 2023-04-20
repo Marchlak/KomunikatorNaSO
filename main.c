@@ -13,8 +13,18 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include"serwer.h"
+#include"klient.h"
 
-#define _POSIX_C_SOURCE 200809L
+#define DEBUGMAIN
+#define PATH_LENGTH 50
+#define USERNAME_LENGTH 25
+
+
+char username[(USERNAME_LENGTH + 1)];
+char fifo_server_path[PATH_LENGTH];
+volatile sig_atomic_t flaga = 1;
+
+
 
 int main(int argc, char **argv)
 {
@@ -33,22 +43,22 @@ int main(int argc, char **argv)
         {0, 0, 0, 0}
     };
 
-    while ((option_cases = getopt_long(argc, argv, "sd:l:", options_long, &option_index)) != -1) {
+    while ((option_cases = getopt_long(argc, argv, "sd:l:", options_long, &option_index)) != -1) { // dodac zeby mozna bylo wpisac jeden argument opcje niszczaca serwer
         switch (option_cases) {
             case 's':
-                if (chosen_option) {
+            ///wybieranie tylko jednej opcji///
+                if (chosen_option) { 
                     fprintf(stderr, "Error: Możesz wybrac tylko jedna opcje naraz\n");
                     return EXIT_FAILURE;
                 }
+                
                 chosen_option = 's';
-                printf("serwer \n");
-                struct sigaction sa;
-    		sa.sa_handler = signal_handler;
-   	        sigemptyset(&sa.sa_mask);
-                sa.sa_flags = SA_RESTART;
-                sigaction(SIGINT, &sa, NULL);
-                sigaction(SIGTERM, &sa, NULL);
-                sigaction(SIGTSTP, &sa, NULL);
+               ///wybieranie tylko jednej opcji///
+               
+               //przechwytywanie sygnału
+               signal(SIGINT, signal_handler);
+               signal(SIGTERM, signal_handler);
+               
                 serwer_start();
                 break;
             case 'l':
@@ -56,12 +66,33 @@ int main(int argc, char **argv)
                     fprintf(stderr, "Error: Mozesz wybrac tylko jedna opcje naraz.\n");
                     return EXIT_FAILURE;
                 }
-                 if(opt_l_count > 0)
-                {
-                fprintf(stderr, "Opcja -l może przymować tylko jeden argument");
-                exit(EXIT_FAILURE);
-                }
                 chosen_option = 'l';
+                ///////////////////
+                
+                //////////////////
+               printf("opcja dziala \n");
+                  
+                if (access(fifo_server_path, F_OK) == 0) 
+                { // file exists
+                    if (strlen(optarg) > USERNAME_LENGTH) {
+                        printf("Nazwa uzytkownika \"%s\" jest zbyt dluga (maksymalna dozwolona dlugosc nazwy to  25 znakow) - zamykanie...",
+                               optarg);
+                        exit(EXIT_FAILURE);
+                    } else if (strlen(optarg) <= 1) {
+                        printf("Nazwa uzytkownika \"%s\" jest zbyt krotka - zamykanie...\n", optarg);
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                    
+
+                    if (strcmp(strcpy(username, optarg), optarg) != 0) {
+                        printf("Nie udalo sie skopiowac nazwy uzytkownika z argumentu optarg do tablicy username\n");
+                        exit(EXIT_FAILURE);
+                    }
+                    
+                    printf("opcja dziala \n");
+                    klient_zaloguj(username);
+                    pid_t pid = fork();
                 
                 printf("login \n");
                 if (optarg) {
@@ -93,3 +124,4 @@ int main(int argc, char **argv)
     //komentarz
     return EXIT_SUCCESS;
 }
+
