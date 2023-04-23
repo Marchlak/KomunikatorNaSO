@@ -21,6 +21,7 @@ char username[(USERNAME_LENGTH + 1)];
 char fifo_client_path[PATH_LENGTH];
 char download_path[PATH_LENGTH] = "";
 int fd_serwer_fifo_WRITE;
+char fifo_server_path[PATH_LENGTH];
 
 int fd_serwer_fifo_WRITE;
 int fd_fifo_klient_READ;
@@ -46,8 +47,9 @@ char* itoa(i) //funkcja itoa wzięta z netu
     return p;
 }
 
-void klient_zaloguj(char *user, char *fifo_server_path, char *download_path)
+void klient_zaloguj(char *user, char *fifo_server_path, char *download_path, char *server_path)
 {
+    strcpy(fifo_server_path,server_path);
     strcpy(username,user);
     printf("%s taka sciezka",username);
     printf("%s taka sciezka",fifo_server_path);int fd_serwer_fifo_WRITE;
@@ -390,6 +392,127 @@ void klient_nadawanie() {
     }
 }
 
+void klient_wyloguj() {
+    char ramka_logowania[FRAME_LENGTH] = "";
+    char readbuf[FRAME_LENGTH];
+    int read_bytes;
+    char komenda[(COMMAND_LENGTH + 1)];
+    char wiadomosc[(FRAME_LENGTH - USERNAME_LENGTH - USERNAME_LENGTH - 2)];
+
+    fd_serwer_fifo_WRITE = open(fifo_server_path, O_WRONLY);
+
+    if (fd_serwer_fifo_WRITE < 0) {
+        perror("Nie udalo sie otworzyc pliku FIFO serwera w trybie zapisu - przez proces klienta - w celu wylogowania! Wylaczanie...");
+        setlogmask(LOG_UPTO(LOG_NOTICE));
+        openlog("KOMUNIKATOR:", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+        syslog(LOG_NOTICE, "Nie udalo sie otworzyc pliku FIFO klienta w trybie zapisu - przez proces klienta \"%s\" - w celu wylogowania!\n", username);
+        closelog();
+        exit(EXIT_FAILURE);
+    }
+
+    strcpy(ramka_logowania, "/logout ");
+    strcat(ramka_logowania, username);
+    ramka_logowania[FRAME_LENGTH - 1] = '\0';
+    //printf("Ramka wylogowania do wyslania: %s\n", ramka_logowania);
+
+    if (klient_wyslij_ramke(ramka_logowania) != 0) {
+        printf("Nie udalo sie wyslac ramki wylogowania do serwera! Wylaczanie...\n");
+        setlogmask(LOG_UPTO(LOG_NOTICE));
+        openlog("KOMUNIKATOR:", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+        syslog(LOG_NOTICE, "Nie udalo sie wyslac ramki wylogowania do serwera przez proces klienta \"%s\" !\n", username);
+        closelog();
+        exit(EXIT_FAILURE);
+    }
+
+    fd_fifo_klient_READ = open(fifo_client_path, O_RDONLY);
+
+    if (fd_fifo_klient_READ < 0) {
+        perror("Nie udalo sie otworzyc pliku FIFO klienta w trybie odczytu - przez proces klienta - w celu odebrania komunikatu dot. wylogowania! Wylaczanie...");
+        setlogmask(LOG_UPTO(LOG_NOTICE));
+        openlog("KOMUNIKATOR:", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+        syslog(LOG_NOTICE, "Nie udalo sie otworzyc pliku FIFO klienta w trybie odczytu - przez proces klienta \"%s\" - w celu odebrania komunikatu dot. wylogowania!\n", username);
+        closelog();
+        exit(EXIT_FAILURE);
+    }
+
+    read_bytes = read(fd_fifo_klient_READ, readbuf, sizeof(readbuf));
+
+    if (read_bytes < 0) {
+        perror("Nie udalo sie odczytac odpowiedzi serwera na ramke wylogowania! Wylaczanie...");
+        setlogmask(LOG_UPTO(LOG_NOTICE));
+        openlog("KOMUNIKATOR:", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+        syslog(LOG_NOTICE, "Nie udalo sie odczytac odpowiedzi serwera na ramke wylogowania - przez proces klienta \"%s\" !\n", username);
+        closelog();
+        exit(EXIT_FAILURE);
+    }
+
+    sleep(1);
+
+    if (close(fd_serwer_fifo_WRITE) == -1) {
+        perror("Nie udalo sie zamknac pliku FIFO serwera przez proces klienta! Wylaczanie...");
+        setlogmask(LOG_UPTO(LOG_NOTICE));
+        openlog("KOMUNIKATOR:", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+        syslog(LOG_NOTICE, "Nie udalo sie zamknac pliku FIFO serwera przez proces klienta \"%s\" !\n", username);
+        closelog();
+        exit(EXIT_FAILURE);
+    }
+
+    if (close(fd_fifo_klient_READ) == -1) {
+        perror("Nie udalo sie zamknac pliku FIFO klienta przez proces klienta! Wylaczanie...");
+        setlogmask(LOG_UPTO(LOG_NOTICE));
+        openlog("KOMUNIKATOR:", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+        syslog(LOG_NOTICE, "Nie udalo sie zamknac pliku FIFO klienta przez proces klienta \"%s\" !\n", username);
+        closelog();
+        exit(EXIT_FAILURE);
+    }
+
+    if (klient_usuwanie_pliku_fifo() == 0) {
+        printf("Pomyslnie usunieto plik FIFO klienta.\n");
+    } else {
+        printf("Nie udalo sie usunac pliku FIFO klienta!\n");
+        setlogmask(LOG_UPTO(LOG_NOTICE));
+        openlog("KOMUNIKATOR:", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+        syslog(LOG_NOTICE, "Nie udalo sie usunac pliku FIFO klienta \"%s\" !\n", username);
+        closelog();
+    }
+
+    readbuf[read_bytes] = '\0';
+
+    if (podziel_ramke_1(readbuf, komenda) == 0) {
+        if (strcmp(komenda, "/alert") == 0) {
+            if (podziel_ramke_2(readbuf, komenda, wiadomosc) == 0) {
+                //printf("pomyslnie podzielono ramke alert! - ramka: \"%s\" \n", readbuf);
+
+                if ((strcmp(komenda, "") != 0) && (strcmp(wiadomosc, "") != 0)) {
+
+                    if (strcmp(wiadomosc, "LOGOUT_SUCC") == 0) {
+                        printf("Wylogowano pomyslnie! \n");
+                    } else if (strcmp(wiadomosc, "LOGOUT_FAIL") == 0) {
+                        printf("Serwer odrzucil zadanie wylogowania!\n");
+                        exit(EXIT_FAILURE);
+                    } else {
+                        printf("Nieprawidlowa tresc alertu: \"%s\"! Konczenie...\n", wiadomosc);
+                    }
+
+                } else {
+                    printf("Nieprawidlowa ramka typu alert bedaca odpowiedzia serwera na zadanie wylogowania! Konczenie...\n");
+                    exit(EXIT_FAILURE);
+                }
+            } else {
+                printf("Blad podczas dzielenia ramki typu alert bedacej odpowiedzia serwera na zadanie wylogowania! Konczenie...\n");
+                printf("ramka: \"%s\" \n", readbuf);
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            printf("Nieprawidlowa odpowiedz serwera na zadanie wylogowania! Konczenie...\n");
+            exit(EXIT_FAILURE);
+        }
+    } else {
+        printf("Blad wyodrebniania komendy z ramki odpowiedzi serwera na zadanie wylogowania! Konczenie...\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
 
 void handler_SIGINT_klient(int signum) {
     write(1, "\nProgram zakonczony przez Ctrl+C!\n", 40);
@@ -412,12 +535,7 @@ void handler_SIGCHLD_klient_matka(int signum) {
     write(1, "\nProces klienta-dziecka zostal zakonczony.\n", 44);
 }
 
-void handler_SIGINT_serwer(int signum) {
-    write(1, "\nProgram zakonczony przez Ctrl+C!\n", 40);
-    serwer_rozeslij_shutdown();
-    serwer_usun_pliki_po_wylaczeniu_serwera();
-    exit(signum);
-}
+
 
 
 

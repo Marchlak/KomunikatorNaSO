@@ -45,6 +45,64 @@ void signal_handler(int signum) {
     }
 }
 
+void handler_SIGINT_serwer(int signum) {
+    write(1, "\nProgram zakonczony przez Ctrl+C!\n", 40);
+    serwer_rozeslij_shutdown();
+   serwer_usun_pliki_po_wylaczeniu_serwera();
+    exit(signum);
+}
+
+void serwer_rozeslij_shutdown() {
+    for (int i = 0; i < NUMBER_OF_USERS; i++) {
+        if (pidy[i] != 0)
+            kill(pidy[i], SIGUSR1);
+    }
+    printf("Zasygnalizowano wylaczanie serwera wszystkim klientom.\n");
+    setlogmask(LOG_UPTO(LOG_NOTICE));
+    openlog("KOMUNIKATOR:", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+    syslog(LOG_NOTICE, "Serwer jest wylaczany a klienci wylogowywani (proces serwera odebral sygnal SIGINT lub SIGQUIT!\n");
+    closelog();
+}
+
+int serwer_usun_pliki_po_wylaczeniu_serwera() {
+    if (remove(fifo_server_path) == 0) {
+        printf("Plik FIFO serwera usuniety pomyslnie!\n");
+        setlogmask(LOG_UPTO(LOG_NOTICE));
+        openlog("KOMUNIKATOR:", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+        syslog(LOG_NOTICE, "Usunieto potok serwera: %s\n", fifo_server_path);
+        closelog();
+    } else {
+        printf("Wystapil blad podczas usuwania pliku FIFO serwera\n");
+        setlogmask(LOG_UPTO(LOG_NOTICE));
+        openlog("KOMUNIKATOR:", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+        syslog(LOG_NOTICE, "Nie udalo sie usunac potoku serwera: %s\n", fifo_server_path);
+        closelog();
+    }
+
+    for (int i = 0; i < NUMBER_OF_USERS; i++) {
+        if (strcmp(uzytkownicy[i], "") != 0) {
+            char potok[PATH_LENGTH] = FIFO_FOLDER;
+            strcat(potok, uzytkownicy[i]);
+            strcat(potok, ".fifo");
+
+            if (remove(potok) != 0) {
+                setlogmask(LOG_UPTO(LOG_NOTICE));
+                openlog("KOMUNIKATOR:", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+                syslog(LOG_NOTICE, "Nie udalo sie usunac (przez proces serwera) potoku klienta %s: %s\n", uzytkownicy[i], potok);
+                closelog();
+                return -1;
+            }
+
+            setlogmask(LOG_UPTO(LOG_NOTICE));
+            openlog("KOMUNIKATOR:", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+            syslog(LOG_NOTICE, "Usunieto (przez proces serwera) potok klienta %s: %s\n", uzytkownicy[i], potok);
+            closelog();
+        }
+    }
+
+    return 0;
+} 
+
 void serwer_wypisz_tablice_uzytkownikow() 
 {
     printf("Zalogowani uzytkownicy:\n");
