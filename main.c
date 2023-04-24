@@ -47,6 +47,7 @@ int main(int argc, char **argv)
     int chosen_option = 0; //czy zostala wybrana opcja
     int opt_l_count = 0; // liczba podanych argumentów dla opcji -l
     int opt_d_count = 0; // liczba podanych argumentów dla opcji -d
+    
 
     static struct option options_long[] = {
         {"serwer", no_argument, 0, 's'},
@@ -63,14 +64,8 @@ int main(int argc, char **argv)
                     fprintf(stderr, "Error: Możesz wybrac tylko jedna opcje naraz\n");
                     return EXIT_FAILURE;
                 }
-                
-                chosen_option = 's';
-               ///wybieranie tylko jednej opcji///
-               
-               //przechwytywanie sygnału
                signal(SIGINT, signal_handler);
                signal(SIGTERM, signal_handler);
-               
                 serwer_start(fifo_server_path);
                 break;
             case 'l':

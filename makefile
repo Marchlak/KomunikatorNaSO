@@ -4,7 +4,7 @@ CFLAGS=-Wall -g
 all: program
 
 program: main.o klient.o serwer.o wiadomosci.o
-	$(CC) $(CFLAGS) main.o klient.o serwer.o wiadomosci.o -o program
+	$(CC) $(CFLAGS) main.o klient.o serwer.o wiadomosci.o -o komunikator
 
 main.o: main.c klient.h serwer.h wiadomosci.h
 	$(CC) $(CFLAGS) -c main.c
@@ -19,5 +19,5 @@ wiadomosci.o: wiadomosci.c wiadomosci.h
 	$(CC) $(CFLAGS) -c wiadomosci.c
 
 clean:
-	rm -f *.o program
+	rm -f *.o komunikator
 

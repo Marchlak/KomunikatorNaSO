@@ -40,6 +40,8 @@ void cleanup() {
 //przechwytywani sygnału
 void signal_handler(int signum) {
     if (signum == SIGINT || signum == SIGTERM) {
+          serwer_rozeslij_shutdown();
+          serwer_usun_pliki_po_wylaczeniu_serwera();
           cleanup();
           exit(EXIT_SUCCESS);
     }
