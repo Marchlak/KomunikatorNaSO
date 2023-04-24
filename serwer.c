@@ -449,5 +449,3 @@ int serwer_wyslij_wiadomosc(char *komenda, char *nadawca, char *odbiorca, char *
         return -1;
     }
 }
-
-

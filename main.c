@@ -77,51 +77,48 @@ int main(int argc, char **argv)
             if (strcmp(download_path, "") == 0) 
             {
                     strcpy(download_path, "BRAK");
-               }
+            }
                
-                if (chosen_option) {
-                    fprintf(stderr, "Error: Mozesz wybrac tylko jedna opcje naraz.\n");
-                    return EXIT_FAILURE;
-                }
-                chosen_option = 'l';
-                ///////////////////
-                  
                 if (access(fifo_server_path, F_OK) == 0) 
                 { // file exists
-                    if (strlen(optarg) > USERNAME_LENGTH) {
+                    if (strlen(optarg) > USERNAME_LENGTH) 
+                    {
                         printf("Nazwa uzytkownika \"%s\" jest zbyt dluga (maksymalna dozwolona dlugosc nazwy to  25 znakow) - zamykanie...",
                                optarg);
                         exit(EXIT_FAILURE);
-                    } else if (strlen(optarg) <= 1) {
+                    } else if (strlen(optarg) <= 1) 
+                    {
                         printf("Nazwa uzytkownika \"%s\" jest zbyt krotka - zamykanie...\n", optarg);
                         exit(EXIT_FAILURE);
-                    }              
-
+                    }
                     if (strcmp(strcpy(username, optarg), optarg) != 0) {
                         printf("Nie udalo sie skopiowac nazwy uzytkownika z argumentu optarg do tablicy username\n");
                         exit(EXIT_FAILURE);
                     }
+                  
+                    klient_zaloguj(username, download_path, fifo_server_path);
                     
-                    printf("%s taka sciezka",fifo_server_path);
-                    klient_zaloguj(username, fifo_server_path, download_path);
                     pid_t pid = fork();
                       int status;
-                    if (pid == -1) {
+                    if (pid == -1) 
+                    {
                         perror("Blad podczas forkowania procesu klienta");
                         exit(EXIT_FAILURE);
 
-                    } else if (pid == 0) { // KLIENT-DZIECKO
+                    } else if (pid == 0) 
+                    { // KLIENT-DZIECKO
                         klient_czytanie();
                         exit(EXIT_SUCCESS);
 
-                    } else { // KLIENT-RODZIC
+                    } else 
+                    { // KLIENT-RODZIC
                         signal(SIGCHLD, handler_SIGCHLD_klient_matka);
                         signal(SIGINT, handler_SIGINT_klient);
                         signal(SIGQUIT, handler_SIGINT_klient);
                         signal(SIGUSR1, handler_SIGUSR1_klient);
 
                         klient_nadawanie();
-
+                       
                         if (waitpid(pid, &status, 0) > 0) {
                             if (WIFEXITED(status) && !WEXITSTATUS(status))
                                 printf("program execution successful\n");
@@ -138,15 +135,13 @@ int main(int argc, char **argv)
                             printf("waitpid() failed\n");
                         }
                     }
-                    }
-                    else {
+               }
+               else {
                     printf("Serwer jest wylaczony!\n");
                     break;
-                }
-                    
-                
-                
-                break;
+                    }      
+               
+               
             case 'd':
                 if (chosen_option) {
                     fprintf(stderr, "Error: Mozesz wybrac tylko jedna opcje naraz.\n");

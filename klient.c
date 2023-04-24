@@ -22,7 +22,6 @@ char fifo_client_path[PATH_LENGTH];
 char download_path[PATH_LENGTH] = "";
 int fd_serwer_fifo_WRITE;
 char fifo_server_path[PATH_LENGTH];
-
 int fd_serwer_fifo_WRITE;
 int fd_fifo_klient_READ;
 
@@ -47,20 +46,19 @@ char* itoa(i) //funkcja itoa wzięta z netu
     return p;
 }
 
-void klient_zaloguj(char *user, char *fifo_server_path, char *download_path, char *server_path)
+void klient_zaloguj(char *user, char *download_path_a, char *server_path)
 {
+
     strcpy(fifo_server_path,server_path);
-    strcpy(username,user);
-    printf("%s taka sciezka",username);
-    printf("%s taka sciezka",fifo_server_path);int fd_serwer_fifo_WRITE;
-int fd_fifo_klient_READ;
+    strcpy (download_path_a,download_path);
     char ramka_logowania[FRAME_LENGTH] = "";
     char readbuf[FRAME_LENGTH];
     int read_bytes;
     char komenda[(COMMAND_LENGTH + 1)];
     char wiadomosc[(FRAME_LENGTH - USERNAME_LENGTH - USERNAME_LENGTH - 2)];
+    
     pid_t klient_pid = getpid();
-
+     
     if (klient_tworzenie_pliku_fifo() != 0) {
         printf("Nie udalo sie utworzyc pliku FIFO klienta! Wylaczanie...\n");
         setlogmask(LOG_UPTO(LOG_NOTICE));
@@ -69,10 +67,11 @@ int fd_fifo_klient_READ;
         closelog();
         exit(EXIT_FAILURE);
     }
+    
      fd_serwer_fifo_WRITE = open(fifo_server_path, O_WRONLY);
-
+    
     if (fd_serwer_fifo_WRITE < 0) {
-        perror("Nie udalo sie otworzyc pliku FIFO serwera w trybie zapisu - przez proces klienta - w celu zalogowania! Wylaczanie...");
+        perror("Nie udalo sie otworzyc pliku FIFO serwera w trybie zapisu - przez proces klienta - w celu zalogowania! Wylaczanie... \n \n");
         setlogmask(LOG_UPTO(LOG_NOTICE));
         openlog("KOMUNIKATOR:", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
         syslog(LOG_NOTICE, "Nie udalo sie otworzyc pliku FIFO serwera w trybie zapisu - przez proces klienta \"%s\" - w celu zalogowania!\n", username);
@@ -100,6 +99,7 @@ int fd_fifo_klient_READ;
     }
     
     fd_fifo_klient_READ = open(fifo_client_path, O_RDONLY);
+
     
     if (fd_fifo_klient_READ < 0) {
         perror("Nie udalo sie otworzyc pliku FIFO klienta w trybie odczytu - przez proces klienta - w celu odebrania komunikatu dot. logowania! Wylaczanie...");
@@ -109,7 +109,7 @@ int fd_fifo_klient_READ;
         closelog();
         exit(EXIT_FAILURE);
     }
-
+     
     read_bytes = read(fd_fifo_klient_READ, readbuf, sizeof(readbuf));
     
     if (read_bytes < 0) {
@@ -138,13 +138,14 @@ int fd_fifo_klient_READ;
         closelog();
         exit(EXIT_FAILURE);
     }
+
     
     readbuf[read_bytes] = '\0';
     
     if (podziel_ramke_1(readbuf, komenda) == 0) {
         if (strcmp(komenda, "/alert") == 0) {
             if (podziel_ramke_2(readbuf, komenda, wiadomosc) == 0) {
-                //printf("pomyslnie podzielono ramke alert! - ramka: \"%s\" \n", readbuf);
+                printf("pomyslnie podzielono ramke alert! - ramka: \"%s\" \n", readbuf);
                 if ((strcmp(komenda, "") != 0) && (strcmp(wiadomosc, "") != 0)) {
 
                     if (strcmp(wiadomosc, "LOGIN_SUCC") == 0) {
@@ -168,10 +169,13 @@ int fd_fifo_klient_READ;
             printf("Nieprawidlowa odpowiedz serwera na zadanie zalogowania! Wylaczanie...\n");
             exit(EXIT_FAILURE);
         }
-    } else {
+    }
+    
+    else {
         printf("Blad wyodrebniania komendy z ramki odpowiedzi serwera na zadanie zalogowania! Wylaczanie...\n");
         exit(EXIT_FAILURE);
     }
+    
 }
 
     
@@ -228,13 +232,13 @@ int klient_wyslij_ramke(char *msg) {
         return -1;
     }
 
-    //printf("Wysylanie ramki...\n");
+    printf("Wysylanie ramki...\n");
 
     if (write(fd_serwer_fifo_WRITE, msg, strlen(msg)) == -1) {
         perror("Nie udalo sie wyslac ramki do serwera!");
         return -1;
     } else {
-        //printf("Wyslano ramke!\n");
+        printf("Wyslano ramke!\n");
         return 0;
     }
 }
