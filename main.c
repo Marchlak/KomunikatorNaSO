@@ -21,18 +21,14 @@
 #define FIFO_FOLDER "potoki/"
 #define FIFO_SERVER_FILE "serwer.fifo"
 
-
-char username[(USERNAME_LENGTH + 1)];
-char fifo_server_path[PATH_LENGTH];
+char username[(USERNAME_LENGTH + 1)]; //nazwa uzytkownika
+char fifo_server_path[PATH_LENGTH]; //sciezka serwera
 volatile sig_atomic_t flaga = 1;
-char download_path[PATH_LENGTH];
-
-
-
+char download_path[PATH_LENGTH]; //sciezka pobierania
 
 int main(int argc, char **argv)
 {
-   if ((strlen(FIFO_FOLDER) + strlen(FIFO_SERVER_FILE)) > PATH_LENGTH) {
+   if ((strlen(FIFO_FOLDER) + strlen(FIFO_SERVER_FILE)) > PATH_LENGTH) { //ustawienie sciezek
         printf("Stala PATH_LENGTH jest za mala, by pomiescic sciezke do pliku FIFO serwera");
         exit(EXIT_FAILURE);
     } else {
@@ -47,16 +43,14 @@ int main(int argc, char **argv)
     int chosen_option = 0; //czy zostala wybrana opcja
     int opt_l_count = 0; // liczba podanych argumentów dla opcji -l
     int opt_d_count = 0; // liczba podanych argumentów dla opcji -d
-    
-
-    static struct option options_long[] = {
+    static struct option options_long[] = { //opcja do wybrania
         {"serwer", no_argument, 0, 's'},
         {"login", required_argument, 0, 'l'},
         {"download", required_argument, 0, 'd'},
         {0, 0, 0, 0}
     };
 
-    while ((option_cases = getopt_long(argc, argv, "sd:l:", options_long, &option_index)) != -1) { // dodac zeby mozna bylo wpisac jeden argument opcje niszczaca serwer
+    while ((option_cases = getopt_long(argc, argv, "sd:l:", options_long, &option_index)) != -1) { //get opt
         switch (option_cases) {
             case 's':
             ///wybieranie tylko jednej opcji///

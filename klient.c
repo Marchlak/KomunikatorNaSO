@@ -46,10 +46,93 @@ char* itoa(i) //funkcja itoa wzięta z netu
     return p;
 }
 
+
+void klient_pobieranie(char *source, char *destination)
+{
+pid_t pid;
+    int status2;
+
+    pid = fork();
+
+    if (pid < 0) {
+        perror("Błąd: nie udało się utworzyć procesu potomnego");
+        exit(1);
+    } else if (pid == 0) {
+        int source_fd, dest_fd;
+    off_t offset = 0;
+    struct stat file_stat;
+    char buffer[BUFSIZ];
+    int sent_bytes = 0;
+    int total_sent_bytes = 0;
+    struct sockaddr_in serv_addr;
+    int sockfd;
+
+    // Tworzenie gniazda
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) {
+        perror("Błąd: nie udało się utworzyć gniazda");
+        exit(1);
+    }
+
+    // Ustawianie informacji o serwerze
+    memset(&serv_addr, 0, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    serv_addr.sin_port = htons(PORT);
+
+    // Łączenie się z serwerem
+    if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+        perror("Błąd: nie udało się połączyć z serwerem");
+        exit(1);
+    }
+
+    // Otwieranie pliku źródłowego
+    source_fd = open(source, O_RDONLY);
+    if (source_fd < 0) {
+        perror("Błąd: nie udało się otworzyć pliku źródłowego");
+        exit(1);
+    }
+
+    // Pobieranie informacji o pliku źródłowym
+    if (fstat(source_fd, &file_stat) < 0) {
+        perror("Błąd: nie udało się pobrać informacji o pliku źródłowym");
+        exit(1);
+    }
+
+    // Otwieranie pliku docelowego
+    dest_fd = open(destination, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (dest_fd < 0) {
+        perror("Błąd: nie udało się otworzyć pliku docelowego");
+        exit(1);
+    }
+
+    // Pobieranie danych z pliku źródłowego i zapisywanie ich do pliku docelowego przy użyciu sendfile
+    while ((sent_bytes = sendfile(dest_fd, source_fd, &offset, BUFSIZ)) > 0) {
+        total_sent_bytes += sent_bytes;
+    }
+
+    if (sent_bytes < 0) {
+        perror("Błąd: nie udało się wysłać danych przy użyciu sendfile");
+        exit(1);
+    }
+
+    printf("Pobrano %d bajtów z pliku %s i zapisano do pliku %s\n", total_sent_bytes, source, destination);
+
+    // Zamykanie plików
+    close(source_fd);
+    close(dest_fd);
+    close(sockfd);
+        exit(0);
+    } else {
+        // Proces macierzysty
+        wait(&status);
+        printf("Proces potomny zakończył się z kodem %d\n", status2);
+    }
+}
 void klient_zaloguj(char *user, char *download_path_a, char *server_path)
 {
 
-    strcpy(fifo_server_path,server_path);
+    strcpy(fifo_server_path,server_path); // niepotrzebne
     strcpy (download_path_a,download_path);
     char ramka_logowania[FRAME_LENGTH] = "";
     char readbuf[FRAME_LENGTH];
@@ -283,7 +366,7 @@ void klient_czytanie() {
                     } else {
                         printf("Blad podczas dzielenia ramki typu msg\n");
                     }
-                }/* else if (strcmp(komenda, "/file") == 0) {
+                } else if (strcmp(komenda, "/file") == 0) {
                     if (podziel_ramke_4(readbuf, komenda, nadawca, odbiorca, wiadomosc) == 0) {
                         if ((strcmp(komenda, "") != 0) && (strcmp(nadawca, "") != 0) && (strcmp(odbiorca, "") != 0) && (strcmp(wiadomosc, "") != 0)) {
                             printf("Pobieranie pliku \"%s\" od uzytkownika %s?\n", wiadomosc, nadawca);
@@ -300,7 +383,7 @@ void klient_czytanie() {
                 } else {
                     printf("Wykryto nieprawidlowa komende! (\"%s\") \n", komenda);
                 }
-                */
+                
             } else {
                 printf("blad wyodrebniania komendy z ramki\n");
             }
@@ -537,6 +620,7 @@ void handler_SIGUSR1_klient(int signum) {
 
 void handler_SIGCHLD_klient_matka(int signum) {
     write(1, "\nProces klienta-dziecka zostal zakonczony.\n", 44);
+   
 }
 
 

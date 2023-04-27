@@ -40,18 +40,12 @@ void cleanup() {
 //przechwytywani sygnału
 void signal_handler(int signum) {
     if (signum == SIGINT || signum == SIGTERM) {
+        write(1, "\nProgram zakonczony przez Ctrl+C!\n", 40);
           serwer_rozeslij_shutdown();
           serwer_usun_pliki_po_wylaczeniu_serwera();
           cleanup();
           exit(EXIT_SUCCESS);
     }
-}
-
-void handler_SIGINT_serwer(int signum) {
-    write(1, "\nProgram zakonczony przez Ctrl+C!\n", 40);
-    serwer_rozeslij_shutdown();
-   serwer_usun_pliki_po_wylaczeniu_serwera();
-    exit(signum);
 }
 
 void serwer_rozeslij_shutdown() {
@@ -125,11 +119,11 @@ int serwer_sprawdz_czy_uzytkownik_jest_w_tablicy_uzytkownikow(char *nazwa_uzytko
     return -1;
 }
 
-void serwer_start(char *path)
+void serwer_start(char *path) //funkcja rozpoczynająca serwer
 {
+
+//lockowanie pliku//
 strcpy (fifo_server_path,path);
-///sprawdzanie czy program działa
-     struct flock lock;
     int lock_fd = open(LOCK_FILE, O_WRONLY | O_CREAT | O_EXCL, 0644);
     if (lock_fd == -1) {
         if (errno == EEXIST) {
@@ -140,10 +134,9 @@ strcpy (fifo_server_path,path);
             exit(EXIT_FAILURE);
         }
         }
-/////
 
 
-//cd 
+//tworzenie pliku fifo
 if (mkfifo(fifo_server_path, 0777) == -1) {
 
         if (errno != EEXIST) {
@@ -164,8 +157,8 @@ if (mkfifo(fifo_server_path, 0777) == -1) {
         syslog(LOG_NOTICE, "Utworzono pomyslnie plik FIFO serwera!\n");
         closelog();
     }
- ///  
-    while (1) {
+ 
+    while (1) { //czytanie z pliku fifo
         printf("Otwieram kolejke FIFO i czekam na kolejne zapytania...\n");
         
         fd_fifo_serwer_READ = open(fifo_server_path, O_RDONLY);
@@ -185,12 +178,11 @@ if (mkfifo(fifo_server_path, 0777) == -1) {
             char nadawca[(USERNAME_LENGTH + 1)];
             char odbiorca[(USERNAME_LENGTH + 1)];
             char wiadomosc[(FRAME_LENGTH - USERNAME_LENGTH - USERNAME_LENGTH - 2)];
-            
+            //odbieranie komend//
             if (podziel_ramke_1(readbuf, komenda) == 0) 
             {
             if (strcmp(komenda, "/login") == 0) {
                     if (podziel_ramke_4(readbuf, komenda, nadawca, odbiorca, wiadomosc) == 0) {
-                    printf("AAAAAAAAAAAAAAAAAA \n");
                         if ((strcmp(komenda, "") != 0) && (strcmp(nadawca, "") != 0) && (strcmp(odbiorca, "") != 0) && (strcmp(wiadomosc, "") != 0)) 
                         {
                             if (close(fd_fifo_serwer_READ) == -1) 
@@ -252,7 +244,22 @@ if (mkfifo(fifo_server_path, 0777) == -1) {
                         printf("blad podczas przetwarzania wiadomosci msg\n");
                     }
                 }
-               
+                else if (strcmp(komenda, "/logout") == 0) {
+                    if (podziel_ramke_2(readbuf, komenda, nadawca) == 0) {
+                        //printf("pomyslnie podzielono wiadomosc logout! ramka: \"%s\" \n", readbuf);
+                        if (close(fd_fifo_serwer_READ) == -1) {
+                            perror("Nie udalo sie zamknac pliku FIFO serwera, przed proba wylogowania nowego klienta przez proces serwera!");
+                            break;
+                        } else {
+                            //printf("Zamknieto plik FIFO serwera (tryb odczytu): \"%s\" \n", fifo_server_path);
+                            if (serwer_wyloguj(nadawca) == 0) {}
+                            serwer_wypisz_tablice_uzytkownikow();
+                            continue;
+                        }
+                    } else {
+                        printf("blad podczas przetwarzania wiadomosci logout\n");
+                    }
+                } 
             else 
             {
                 printf("blad wyodrebniania komendy z ramki\n");
@@ -451,3 +458,77 @@ int serwer_wyslij_wiadomosc(char *komenda, char *nadawca, char *odbiorca, char *
         return -1;
     }
 }
+
+int serwer_wyloguj(char *login) {
+    if (serwer_sprawdz_czy_uzytkownik_jest_w_tablicy_uzytkownikow(login) == 0) {
+        //jest taki jegomosc
+        printf("Wylogowywanie uzytkownika \"%s\"...\n", login);
+
+        if (serwer_usun_uzytkownika_z_tablicy(login) != 0) {
+            printf("Nie udalo sie wylogowac uzytkownika \"%s\"!\n", login);
+            setlogmask(LOG_UPTO(LOG_NOTICE));
+            openlog("KOMUNIKATOR:", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+            syslog(LOG_NOTICE, "Nie udalo sie wylogowac klienta \"%s\" !\n", login);
+            closelog();
+
+            if (serwer_wyslij_komunikat(login, "LOGOUT_FAIL") != 0) {
+                printf("Nie udalo sie wyslac komunikatu o bledzie przy wylogowywaniu uzytkownika \"%s\"!\n", login);
+                return -1;
+            } else {
+                //printf("Wyslano komunikat o bledzie przy wylogowywaniu uzytkownika \"%s\"!\n", login);
+                return -1;
+            }
+
+        } else {
+            printf("Pomyslnie wylogowano uzytkownika \"%s\"!\n", login);
+            setlogmask(LOG_UPTO(LOG_NOTICE));
+            openlog("KOMUNIKATOR:", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+            syslog(LOG_NOTICE, "Wylogowano pomyslnie klienta \"%s\" !\n", login);
+            closelog();
+
+            if (serwer_wyslij_komunikat(login, "LOGOUT_SUCC") != 0) {
+                printf("Nie udalo sie wyslac komunikatu o pomyslnym wylogowaniu uzytkownika \"%s\"!\n", login);
+                return -1;
+            } else {
+                //printf("Logi zostaly zapisane![sudo tail -f /var/log/syslog]\n");
+                //printf("Wyslano komunikat o pomyslnymserwer_usun_uzy wylogowaniu uzytkownika \"%s\"!\n", login);
+                return 0;
+            }
+
+        }
+    } else {
+        printf("Wykryto probe wylogowania niezalogowanego uzytkownika - \"%s\"! Odrzucono!\n", login);
+        setlogmask(LOG_UPTO(LOG_NOTICE));
+        openlog("KOMUNIKATOR:", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+        syslog(LOG_NOTICE, "Wykryto probe wylogowania niezalogowanego klienta (\"%s\") !\n", login);
+        closelog();
+
+        if (serwer_wyslij_komunikat(login, "LOGOUT_FAIL") != 0) {
+            printf("Nie udalo sie wyslac komunikatu o odrzuceniu zadania wylogowania niezalogowanego uzytkownika (\"%s\")!\n", login);
+            return -1;
+        } else {
+            //printf("Wyslano komunikat o odrzuceniu zadania wylogowania niezalogowanego uzytkownika (\"%s\")!\n", login);
+            return -1;
+        }
+    }
+}
+
+int serwer_usun_uzytkownika_z_tablicy(char *username) {
+    if (serwer_sprawdz_czy_uzytkownik_jest_w_tablicy_uzytkownikow(username) == 0) {
+        for (int i = 0; i < NUMBER_OF_USERS; i++) {
+            if (strcmp(uzytkownicy[i], username) == 0) {
+                strcpy(uzytkownicy[i], "");
+                strcpy(download[i], "");
+                pidy[i] = 0;
+                return 0;
+            }
+        }
+        printf("Blad dzialania funkcji serwer_usun_uzytkownica_z_tablicy! Nie znaleziono uzytkownika \"%s\" w tablicy uzytkownicy, wbrew odpowiedzi funkcji serwer_sprawdz_czy_uzytkownik_jest_w_tablicy_uzytkownikow!\n",
+               username);
+        return -1;
+    } else {
+        printf("Nie mozna usunac uzytkownika, ktorego nie ma w tablicy uzytkownikow! (%s)\n", username);
+        return -1;
+    }
+}
+
