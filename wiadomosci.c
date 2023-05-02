@@ -30,7 +30,7 @@ int podziel_ramke_1(char *src, char *dest_command)
 
     if (strcmp(strcpy(temp, src), src) == 0) 
     {
-        printf("poprawnie tymczasowo skopiowano tablice ramki\n");
+       // printf("poprawnie tymczasowo skopiowano tablice ramki\n");
     } 
     else 
     {
@@ -40,11 +40,11 @@ int podziel_ramke_1(char *src, char *dest_command)
 
     char *token = strtok(temp, " "); // przeczytaj komende
     
-    printf("%s token \n", token);
+    //printf("%s token \n", token);
 
     if (token != NULL) 
     {
-        printf("token z komenda: \"%s\" \n", token);
+        //printf("token z komenda: \"%s\" \n", token);
 
         if (strlen(token) > (COMMAND_LENGTH + 1)) 
         {
@@ -56,7 +56,7 @@ int podziel_ramke_1(char *src, char *dest_command)
 
             if (strcmp(strcpy(dest_command, token), token) == 0) 
             {
-                printf("skopiowano token z komenda: \"%s\" \n", token);
+             //   printf("skopiowano token z komenda: \"%s\" \n", token);
                 return 0;
             } 
             else 
@@ -74,7 +74,7 @@ int podziel_ramke_1(char *src, char *dest_command)
         return -1;
     }
    }
-   
+   // Dzielenie ramki na serwerze - login, logout
    int podziel_ramke_2(char *src, char *dest_command, char *dest_sender) { //wywolywana jesli ramka zaczyna sie od znaku '/'
     char temp[FRAME_LENGTH];
     if (strcmp(strcpy(temp, src), src) == 0) {
@@ -124,7 +124,7 @@ int podziel_ramke_1(char *src, char *dest_command)
         return -1;
     }
 }
-
+// Dzielenie polecenia na kliencie - msg, file; Dzielenie ramki na serwerze - login ze sciezka pobierania
 int podziel_ramke_3(char *src, char *dest_command, char *dest_receiver, char *dest_content) {
     char temp[FRAME_LENGTH];
     if (strcmp(strcpy(temp, src), src) == 0) {
@@ -195,11 +195,11 @@ int podziel_ramke_3(char *src, char *dest_command, char *dest_receiver, char *de
         return -1;
     }
 }
-   
+   // Dzielenie ramki na serwerze - msg, file
    int podziel_ramke_4(char *src, char *dest_command, char *dest_sender, char *dest_receiver, char *dest_content) {
     char temp[FRAME_LENGTH];
     if (strcmp(strcpy(temp, src), src) == 0) {
-        printf("poprawnie tymczasowo skopiowano tablice ramki\n");
+       // printf("poprawnie tymczasowo skopiowano tablice ramki\n");
     } else {
         printf("nie udalo sie tymczasowo skopiowac tablicy ramki\n");
         return -1;
@@ -249,7 +249,7 @@ int podziel_ramke_3(char *src, char *dest_command, char *dest_receiver, char *de
                             }
 
                             token = strtok(NULL, "\0");
-                            printf("token z trescia ramki: \"%s\" \n", token);
+                         //   printf("token z trescia ramki: \"%s\" \n", token);
                             if (token != NULL) {
                                 if (strlen(token) > (FRAME_LENGTH - USERNAME_LENGTH - USERNAME_LENGTH - 2)) {
                                     printf("tresc ramki \"%s\" jest zbyt dluga (%ld/%d)\n", token, strlen(token),

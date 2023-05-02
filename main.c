@@ -40,29 +40,38 @@ int main(int argc, char **argv)
     int digit_optind = 0;
     int this_option_optind = optind ? optind : 1;
     int option_index = 0; //indeks opcji
-    int chosen_option = 0; //czy zostala wybrana opcja
-    int opt_l_count = 0; // liczba podanych argumentów dla opcji -l
-    int opt_d_count = 0; // liczba podanych argumentów dla opcji -d
+    int opt_d_count = 0;
     static struct option options_long[] = { //opcja do wybrania
         {"serwer", no_argument, 0, 's'},
         {"login", required_argument, 0, 'l'},
         {"download", required_argument, 0, 'd'},
         {0, 0, 0, 0}
     };
+    
 
     while ((option_cases = getopt_long(argc, argv, "sd:l:", options_long, &option_index)) != -1) { //get opt
         switch (option_cases) {
             case 's':
+            if(argc > 2)
+            {
+              printf("Za dużo opcji.. Kończenie programu \n");
+              exit(0);
+            }
                signal(SIGINT, signal_handler);
                signal(SIGTERM, signal_handler);
                 serwer_start(fifo_server_path);
                 break;
             case 'd':
+            opt_d_count++;
+            if(opt_d_count > 1)
+                {
+                  printf("Można wybrać tylko jedną opcje -d \n");
+                  exit(0);
+                }
                 if (strlen(optarg) > PATH_LENGTH) {
                     printf("Stala PATH_LENGTH jest za mala, by pomiescic sciezke pobierania plikow dla klienta\n");
                     exit(EXIT_FAILURE);
                 }
-
                 strcpy(download_path, optarg);
                 if (mkdir(optarg, 0777) == -1) {
                     if (errno == EEXIST)
@@ -143,14 +152,14 @@ int main(int argc, char **argv)
                     break;
                     }
                     default:
-                printf("?? getopt returned character code 0%o ??\n", option_cases);
+                printf("Brak takiej opcji");
                 exit(EXIT_FAILURE);
                 }      
                
                
 
     }
-    //komentarz
+    printf("Dostępne opcje: \n-s uruchomienie serwera \n-d 'sciezka pobierania' wlaczenie opcji odbierania plikow \n-l 'nick' zalogowanie użytkownika \nUwaga korzystając z opcji -d trzeba ją wpisać przed opcją l \n");
     return EXIT_SUCCESS;
 }
 

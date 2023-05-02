@@ -46,22 +46,20 @@ char* itoa(i) //funkcja itoa wzięta z netu
     return p;
 }
 
-void extract_filename(char* path, char* filename) {
-    // znajdź pozycję ostatniego wystąpienia znaku '/'
+void extract_filename(char* path, char* filename) { //wyodrebnianie nazwy pliku zsciezki
     char* last_slash = strrchr(path, '/');
     
-    // jeśli slash nie został znaleziony, skopiuj całą ścieżkę
+    
     if (last_slash == NULL) {
         strcpy(filename, path);
         return;
     }
     
-    // skopiuj nazwę pliku bez slash'a
     strcpy(filename, last_slash + 1);
 }
 
 
-void klient_pobieranie(char *source, char *destination)
+void klient_pobieranie(char *source, char *destination) //pobieranie
 {
 
    int fd_src, fd_dst;
@@ -110,10 +108,10 @@ void klient_pobieranie(char *source, char *destination)
 }
 
 
-void klient_zaloguj(char *user, char *download_path_a, char *server_path)
+void klient_zaloguj(char *user, char *download_path_a, char *server_path) //logowanie klienta
 {
 
-    strcpy(fifo_server_path,server_path); // niepotrzebne
+    strcpy(fifo_server_path,server_path);
     strcpy (download_path_a,download_path);
     char ramka_logowania[FRAME_LENGTH] = "";
     char readbuf[FRAME_LENGTH];
@@ -151,7 +149,7 @@ void klient_zaloguj(char *user, char *download_path_a, char *server_path)
     strcat(ramka_logowania, download_path);
     ramka_logowania[FRAME_LENGTH - 1] = '\0';
     
-    printf("Ramka logowania do wyslania: %s\n", ramka_logowania);
+   // printf("Ramka logowania do wyslania: %s\n", ramka_logowania);
     
     if (klient_wyslij_ramke(ramka_logowania) != 0) {
         printf("Nie udalo sie wyslac ramki logowania do serwera! Wylaczanie...\n");
@@ -209,7 +207,7 @@ void klient_zaloguj(char *user, char *download_path_a, char *server_path)
     if (podziel_ramke_1(readbuf, komenda) == 0) {
         if (strcmp(komenda, "/alert") == 0) {
             if (podziel_ramke_2(readbuf, komenda, wiadomosc) == 0) {
-                printf("pomyslnie podzielono ramke alert! - ramka: \"%s\" \n", readbuf);
+               // printf("pomyslnie podzielono ramke alert! - ramka: \"%s\" \n", readbuf);
                 if ((strcmp(komenda, "") != 0) && (strcmp(wiadomosc, "") != 0)) {
 
                     if (strcmp(wiadomosc, "LOGIN_SUCC") == 0) {
@@ -338,7 +336,7 @@ void klient_czytanie() {
                                 perror("Nie udalo sie zamknac pliku FIFO klienta przez proces klienta-dziecko!");
                                 exit(EXIT_FAILURE);
                             }else{
-                                printf("%s: \"%s\" \n: ", nadawca, wiadomosc);
+                                printf("%s: \"%s\" \n", nadawca, wiadomosc); //wysylanie wiadomosci 
                                 ///printf("_ ");
                             }
                         } else {
