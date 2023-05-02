@@ -46,89 +46,70 @@ char* itoa(i) //funkcja itoa wzięta z netu
     return p;
 }
 
+void extract_filename(char* path, char* filename) {
+    // znajdź pozycję ostatniego wystąpienia znaku '/'
+    char* last_slash = strrchr(path, '/');
+    
+    // jeśli slash nie został znaleziony, skopiuj całą ścieżkę
+    if (last_slash == NULL) {
+        strcpy(filename, path);
+        return;
+    }
+    
+    // skopiuj nazwę pliku bez slash'a
+    strcpy(filename, last_slash + 1);
+}
+
 
 void klient_pobieranie(char *source, char *destination)
 {
-pid_t pid;
-    int status2;
 
-    pid = fork();
-
-    if (pid < 0) {
-        perror("Błąd: nie udało się utworzyć procesu potomnego");
-        exit(1);
-    } else if (pid == 0) {
-        int source_fd, dest_fd;
+   int fd_src, fd_dst;
+    struct stat stat_src;
     off_t offset = 0;
-    struct stat file_stat;
-    char buffer[BUFSIZ];
-    int sent_bytes = 0;
-    int total_sent_bytes = 0;
-    struct sockaddr_in serv_addr;
-    int sockfd;
+    char filename[1000];
+    extract_filename(source,filename);
+    strcat(destination, "/");
+    strcat(destination,filename);
+    printf("%s %s \n", source, destination);
 
-    // Tworzenie gniazda
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) {
-        perror("Błąd: nie udało się utworzyć gniazda");
-        exit(1);
+    // Otwórz plik źródłowy w trybie do odczytu
+    fd_src = open(source, O_RDONLY);
+    if (fd_src == -1) {
+        perror("Nie udało się otworzyć pliku źródłowego");
+        return;
     }
 
-    // Ustawianie informacji o serwerze
-    memset(&serv_addr, 0, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(PORT);
-
-    // Łączenie się z serwerem
-    if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-        perror("Błąd: nie udało się połączyć z serwerem");
-        exit(1);
+    // Pobierz statystyki pliku źródłowego
+    if (fstat(fd_src, &stat_src) == -1) {
+        perror("Nie udało się pobrać informacji o pliku źródłowym");
+        close(fd_src);
+        return;
     }
 
-    // Otwieranie pliku źródłowego
-    source_fd = open(source, O_RDONLY);
-    if (source_fd < 0) {
-        perror("Błąd: nie udało się otworzyć pliku źródłowego");
-        exit(1);
+    // Otwórz plik docelowy w trybie do zapisu
+    fd_dst = open(destination, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
+    if (fd_dst == -1) {
+        perror("Nie udało się otworzyć pliku docelowego");
+        close(fd_src);
+        return;
     }
 
-    // Pobieranie informacji o pliku źródłowym
-    if (fstat(source_fd, &file_stat) < 0) {
-        perror("Błąd: nie udało się pobrać informacji o pliku źródłowym");
-        exit(1);
+    // Skopiuj zawartość pliku źródłowego do pliku docelowego za pomocą funkcji sendfile
+    if (sendfile(fd_dst, fd_src, &offset, stat_src.st_size) == -1) {
+        perror("Nie udało się skopiować pliku");
+        close(fd_src);
+        close(fd_dst);
+        return;
     }
 
-    // Otwieranie pliku docelowego
-    dest_fd = open(destination, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    if (dest_fd < 0) {
-        perror("Błąd: nie udało się otworzyć pliku docelowego");
-        exit(1);
-    }
-
-    // Pobieranie danych z pliku źródłowego i zapisywanie ich do pliku docelowego przy użyciu sendfile
-    while ((sent_bytes = sendfile(dest_fd, source_fd, &offset, BUFSIZ)) > 0) {
-        total_sent_bytes += sent_bytes;
-    }
-
-    if (sent_bytes < 0) {
-        perror("Błąd: nie udało się wysłać danych przy użyciu sendfile");
-        exit(1);
-    }
-
-    printf("Pobrano %d bajtów z pliku %s i zapisano do pliku %s\n", total_sent_bytes, source, destination);
-
-    // Zamykanie plików
-    close(source_fd);
-    close(dest_fd);
-    close(sockfd);
-        exit(0);
-    } else {
-        // Proces macierzysty
-        wait(&status);
-        printf("Proces potomny zakończył się z kodem %d\n", status2);
-    }
+    // Zamknij pliki
+    close(fd_src);
+    close(fd_dst);
+  
 }
+
+
 void klient_zaloguj(char *user, char *download_path_a, char *server_path)
 {
 
@@ -373,7 +354,7 @@ void klient_czytanie() {
                             klient_pobieranie(wiadomosc, download_path);
 
                             printf("Zakonczono pobieranie pliku!\n");
-                            break;
+                  
                         } else {
                             printf("Nieprawidlowa ramka typu file!\n");
                         }

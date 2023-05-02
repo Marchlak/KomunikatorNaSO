@@ -53,14 +53,27 @@ int main(int argc, char **argv)
     while ((option_cases = getopt_long(argc, argv, "sd:l:", options_long, &option_index)) != -1) { //get opt
         switch (option_cases) {
             case 's':
-            ///wybieranie tylko jednej opcji///
-                if (chosen_option) { 
-                    fprintf(stderr, "Error: Możesz wybrac tylko jedna opcje naraz\n");
-                    return EXIT_FAILURE;
-                }
                signal(SIGINT, signal_handler);
                signal(SIGTERM, signal_handler);
                 serwer_start(fifo_server_path);
+                break;
+            case 'd':
+                if (strlen(optarg) > PATH_LENGTH) {
+                    printf("Stala PATH_LENGTH jest za mala, by pomiescic sciezke pobierania plikow dla klienta\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                strcpy(download_path, optarg);
+                if (mkdir(optarg, 0777) == -1) {
+                    if (errno == EEXIST)
+                        printf("Nie ma potrzeby tworzyc folderu do pobierania, poniewaz juz takowy istnieje (%s).\n", download_path);
+                    else {
+                        perror("Nie udalo sie utworzyc podanego folderu do pobierania!");
+                        exit(EXIT_FAILURE);
+                    }
+                } else {
+                    printf("Folder do pobierania utworzony (%s).\n", download_path);
+                }
                 break;
             case 'l':
             if (strcmp(download_path, "") == 0) 
@@ -128,30 +141,14 @@ int main(int argc, char **argv)
                else {
                     printf("Serwer jest wylaczony!\n");
                     break;
-                    }      
-               
-               
-            case 'd':
-                if (chosen_option) {
-                    fprintf(stderr, "Error: Mozesz wybrac tylko jedna opcje naraz.\n");
-                    return EXIT_FAILURE;
-                }
-                if(opt_l_count > 0)
-                {
-                fprintf(stderr, "Opcja -l może przymować tylko jeden argument");
+                    }
+                    default:
+                printf("?? getopt returned character code 0%o ??\n", option_cases);
                 exit(EXIT_FAILURE);
-                }
-                chosen_option = 'd';
-                printf("download \n");
-                if (optarg) {
-                    printf("Zalogowano uzytkownika %s\n", optarg);
-                }
-                break;
-            case '?':
-            printf("bład przy wyborze opcji zakończenie programu");
-            //dopisac zeby cos do logow wrzucalo
-                break;
-        }
+                }      
+               
+               
+
     }
     //komentarz
     return EXIT_SUCCESS;

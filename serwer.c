@@ -259,7 +259,37 @@ if (mkfifo(fifo_server_path, 0777) == -1) {
                     } else {
                         printf("blad podczas przetwarzania wiadomosci logout\n");
                     }
-                } 
+                }
+                else if (strcmp(komenda, "/file") == 0) {
+                    if (podziel_ramke_4(readbuf, komenda, nadawca, odbiorca, wiadomosc) == 0) {
+                        if ((strcmp(komenda, "") != 0) && (strcmp(nadawca, "") != 0) && (strcmp(odbiorca, "") != 0) && (strcmp(wiadomosc, "") != 0)) {
+                            //printf("pomyslnie przetworzono wiadomosc file\n");
+                            if( serwer_sprawdz_czy_uzytkownik_moze_pobierac(odbiorca) == 0 ){
+                                if(serwer_wyslij_wiadomosc(komenda, nadawca, odbiorca, wiadomosc) != 0) {
+                                    printf("Nie udalo sie przeslac zadania pobierania od \"%s\" do \"%s\"! \n", nadawca, odbiorca);
+                                    setlogmask(LOG_UPTO(LOG_NOTICE));
+                                    openlog("KOMUNIKATOR:", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+                                    syslog(LOG_NOTICE, "Nie udalo sie przeslac zadania pobierania od \"%s\" do \"%s\"! \n", nadawca, odbiorca);
+                                    closelog();
+                                }else
+                                    printf("Uzytkownik \"%s\" przesyla plik dla uzytkownika \"%s\". \n", nadawca, odbiorca);
+                            }else{
+                                if( serwer_wyslij_wiadomosc("/msg", "SERWER", nadawca, "Ten uzytkownik nie moze pobierac plikow!") != 0) {
+                                    printf("Nie udalo sie przeslac informacji o braku mozliwosci pobierania przez klienta \"%s\" do \"%s\"! \n", odbiorca, nadawca);
+                                    setlogmask(LOG_UPTO(LOG_NOTICE));
+                                    openlog("KOMUNIKATOR:", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+                                    syslog(LOG_NOTICE, "Nie udalo sie przeslac informacji o braku mozliwosci pobierania przez klienta \"%s\" do \"%s\"! \n", odbiorca, nadawca);
+                                    closelog();
+                                }
+                            }
+                        } else {
+                            printf("blad podczas dzielenia wiadomosci file\n");
+                        }
+
+                    } else {
+                        printf("blad podczas dzielenia wiadomosci file\n");
+                    }
+                }
             else 
             {
                 printf("blad wyodrebniania komendy z ramki\n");
@@ -531,4 +561,17 @@ int serwer_usun_uzytkownika_z_tablicy(char *username) {
         return -1;
     }
 }
+
+int serwer_sprawdz_czy_uzytkownik_moze_pobierac(char* odbiorca){
+    for(int i = 0; i < NUMBER_OF_USERS; i++){
+        if (strcmp(uzytkownicy[i], odbiorca) == 0) {
+            if( strcmp(download[i], "BRAK") != 0 && strcmp(download[i], "") != 0 ){
+                return 0;
+            }else
+                return -1;
+        }
+    }
+        return -1;
+}
+
 
