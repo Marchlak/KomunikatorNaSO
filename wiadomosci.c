@@ -15,9 +15,9 @@
 
 #define FIFO_FOLDER "potoki/"
 #define FIFO_SERVER_FILE "serwer.fifo"
-#define LOCK_FILE "/var/run/server.pid"
+#define LOCK_FILE "potoki/server.pid"
 #define PATH_LENGTH 50
-#define FRAME_LENGTH 200
+#define FRAME_LENGTH 400
 #define NUMBER_OF_USERS 5
 #define USERNAME_LENGTH 25
 #define COMMAND_LENGTH 10
@@ -134,8 +134,10 @@ int podziel_ramke_3(char *src, char *dest_command, char *dest_receiver, char *de
         return -1;
     }
     char *token = strtok(temp, " "); // przeczytaj komende
+    
     if (token != NULL) {
         //printf("token z komenda: \"%s\" \n", token);
+        
         if (strlen(token) > (COMMAND_LENGTH + 1)) {
             printf("komenda \"%s\" jest zbyt dluga (%ld/%d)\n", token, strlen(token), COMMAND_LENGTH + 1);
             return -1;
@@ -146,6 +148,11 @@ int podziel_ramke_3(char *src, char *dest_command, char *dest_receiver, char *de
                 perror("nie udalo sie skopiowac tokenu z komenda");
                 return -1;
             }
+            
+            if(strcmp(token,"/users")==0)
+        {
+        strcat(temp," a a");
+        }
 
             char *token = strtok(NULL, " "); // przeczytaj odbiorce
             if (token != NULL) {
@@ -156,14 +163,14 @@ int podziel_ramke_3(char *src, char *dest_command, char *dest_receiver, char *de
                     return -1;
                 } else {
                     if (strcmp(strcpy(dest_receiver, token), token) == 0) {
-                        //printf("skopiowano token z odbiorca: \"%s\" \n", token);
+                      //  printf("skopiowano token z odbiorca: \"%s\" \n", token);
                     } else {
                         perror("nie udalo sie skopiowac tokenu z odbiorca");
                         return -1;
                     }
 
                     token = strtok(NULL, "\0"); // przeczytaj reszte ramki, czyli content
-                    //printf("token z trescia ramki: \"%s\" \n", token);
+                 //   printf("token z trescia ramki: \"%s\" \n", token);
                     if (token != NULL) {
                         if (strlen(token) > (FRAME_LENGTH - USERNAME_LENGTH - USERNAME_LENGTH - 2)) {
                             printf("tresc ramki \"%s\" jest zbyt dluga (%ld/%d)\n", token, strlen(token), (FRAME_LENGTH - USERNAME_LENGTH - USERNAME_LENGTH - 2));

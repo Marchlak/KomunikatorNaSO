@@ -16,9 +16,9 @@
 
 #define FIFO_FOLDER "potoki/"
 #define FIFO_SERVER_FILE "serwer.fifo"
-#define LOCK_FILE "/var/run/server.pid"
+#define LOCK_FILE "potoki/server.pid"
 #define PATH_LENGTH 50
-#define FRAME_LENGTH 200
+#define FRAME_LENGTH 400
 #define NUMBER_OF_USERS 5
 #define USERNAME_LENGTH 25
 #define COMMAND_LENGTH 10
@@ -107,6 +107,23 @@ void serwer_wypisz_tablice_uzytkownikow()
     {
         printf("%d: %s : %d : %s\n", i, uzytkownicy[i], pidy[i], download[i]);
     }
+}
+
+void serwer_wyslij_tablice_uzytkownikow(char *nadawca, char *komenda) 
+{
+    char ramka_uzytkownikow[USERNAME_LENGTH*5+10];
+    strcpy(ramka_uzytkownikow,"Dostepni uzytkownicy ");
+   for (int i = 0; i < NUMBER_OF_USERS; i++) 
+    {
+    if(strlen(uzytkownicy[i])>0)
+    {
+     strcat(ramka_uzytkownikow,uzytkownicy[i]);
+     strcat(ramka_uzytkownikow," ");
+    }
+    
+    }
+    printf("%s \n", ramka_uzytkownikow);
+    serwer_wyslij_wiadomosc("/msg", "SERWER", nadawca, ramka_uzytkownikow);
 }
 
 int serwer_sprawdz_czy_uzytkownik_jest_w_tablicy_uzytkownikow(char *nazwa_uzytkownika) 
@@ -290,6 +307,16 @@ if (mkfifo(fifo_server_path, 0777) == -1) {
                         printf("blad podczas dzielenia wiadomosci file\n");
                     }
                 }
+                else if (strcmp(komenda, "/users") == 0) {
+                    if (podziel_ramke_4(readbuf, komenda, nadawca, odbiorca, wiadomosc) == 0) {
+                     serwer_wyslij_tablice_uzytkownikow(nadawca, komenda); 
+                    } 
+                    else 
+                    {
+                        printf("blad podczas przetwarzania wiadomosci login\n");
+                    }
+                }
+                
             else 
             {
                 printf("blad wyodrebniania komendy z ramki\n");

@@ -1,23 +1,28 @@
 CC=gcc
 CFLAGS=-Wall -g
+TARGET=komunikator
+OBJ_DIR=build
 
-all: program
+all: $(TARGET)
 
-program: main.o klient.o serwer.o wiadomosci.o
-	$(CC) $(CFLAGS) main.o klient.o serwer.o wiadomosci.o -o komunikator
+$(TARGET): $(OBJ_DIR)/main.o $(OBJ_DIR)/klient.o $(OBJ_DIR)/serwer.o $(OBJ_DIR)/wiadomosci.o
+	$(CC) $(CFLAGS) $^ -o $@
 
-main.o: main.c klient.h serwer.h wiadomosci.h
-	$(CC) $(CFLAGS) -c main.c
+$(OBJ_DIR)/main.o: main.c klient.h serwer.h wiadomosci.h | $(OBJ_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
 
-klient.o: klient.c klient.h wiadomosci.h
-	$(CC) $(CFLAGS) -c klient.c
+$(OBJ_DIR)/klient.o: klient.c klient.h wiadomosci.h | $(OBJ_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
 
-serwer.o: serwer.c klient.h serwer.h wiadomosci.h
-	$(CC) $(CFLAGS) -c serwer.c
+$(OBJ_DIR)/serwer.o: serwer.c klient.h serwer.h wiadomosci.h | $(OBJ_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
 
-wiadomosci.o: wiadomosci.c wiadomosci.h
-	$(CC) $(CFLAGS) -c wiadomosci.c
+$(OBJ_DIR)/wiadomosci.o: wiadomosci.c wiadomosci.h | $(OBJ_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJ_DIR):
+	mkdir $(OBJ_DIR)
 
 clean:
-	rm -f *.o komunikator
-
+	rm -f $(OBJ_DIR)/*.o $(TARGET)
+	rmdir $(OBJ_DIR)

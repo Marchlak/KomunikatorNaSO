@@ -13,7 +13,7 @@
 
 #define USERNAME_LENGTH 25
 #define COMMAND_LENGTH 10
-#define FRAME_LENGTH 200
+#define FRAME_LENGTH 400
 #define PATH_LENGTH 50
 #define INT_DIGITS 19
 
@@ -446,7 +446,38 @@ void klient_nadawanie() {
                         exit(EXIT_FAILURE);
                     }
 
-                } else {
+                }
+                else if(strcmp(komenda, "/users") == 0)
+                {
+                    strcpy(ramka, komenda);
+                    strcat(ramka, " ");
+                    strcat(ramka, username);
+                    strcat(ramka, " ");
+                    strcat(ramka, odbiorca);
+                    strcat(ramka, " ");
+                    strcat(ramka, wiadomosc);
+                      fd_serwer_fifo_WRITE = open(fifo_server_path, O_WRONLY);
+
+                    if (fd_serwer_fifo_WRITE < 0) {
+                        perror("Nie udalo sie otworzyc pliku FIFO serwera w trybie zapisu - przez proces klienta-matki - w celu ramki typu users!");
+                    }
+
+                    if (klient_wyslij_ramke(ramka) != 0) 
+                    {
+                        printf("Nie udalo sie wyslac do serwera ramki typu users!\n");
+                        setlogmask(LOG_UPTO(LOG_NOTICE));
+                        openlog("KOMUNIKATOR:", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+                        syslog(LOG_NOTICE, "Nie udalo sie wyslac do serwera ramki typu users!\n");
+                        closelog();
+                    }
+
+                    if (close(fd_serwer_fifo_WRITE) == -1) 
+                    {
+                        perror("Nie udalo sie zamknac pliku FIFO serwera przez proces klienta-matke!");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                 else {
                     printf("Nie ma takiej komendy!\n");
                 }
             } else {
